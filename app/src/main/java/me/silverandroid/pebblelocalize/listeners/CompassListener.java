@@ -5,8 +5,6 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.util.Log;
-import android.view.animation.Animation;
-import android.view.animation.RotateAnimation;
 import android.widget.ImageView;
 
 import java.util.Arrays;
@@ -21,12 +19,13 @@ public class CompassListener implements SensorEventListener {
     private static float lastKnownDistance;
     private static float lastKnownAngle;
     private final ImageView arrow;
-    private float[] magnetometerData = new float[3];
-    private float[] accelerometerData = new float[3];
     float[] matrixR = new float[9];
     float[] orientationMatrix = new float[3];
+    private float[] magnetometerData = new float[3];
+    private float[] accelerometerData = new float[3];
     private boolean magnetometerSet = false;
     private boolean accelerometerSet = false;
+    private float currentDegree = 0;
 
     public CompassListener(ImageView arrow) {
         this.arrow = arrow;
@@ -53,8 +52,8 @@ public class CompassListener implements SensorEventListener {
             SensorManager.getOrientation(matrixR, orientationMatrix);
             float azimuthInRadians = orientationMatrix[0];
             float azimuthInDegrees = (float) (Math.toDegrees(azimuthInRadians) + 360) % 360;
-            lastKnownAngle = -azimuthInDegrees;
-            DirectionActivity.updateScreen(lastKnownDistance, lastKnownAngle);
+            currentDegree = lastKnownAngle - azimuthInDegrees;
+            DirectionActivity.updateScreen(lastKnownDistance, currentDegree);
         }
     }
 
