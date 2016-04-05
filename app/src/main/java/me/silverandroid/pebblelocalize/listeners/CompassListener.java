@@ -18,18 +18,12 @@ public class CompassListener implements SensorEventListener {
     private static final String TAG = "CompassListener";
     private static float lastKnownDistance;
     private static float lastKnownAngle;
-    private final ImageView arrow;
     float[] matrixR = new float[9];
     float[] orientationMatrix = new float[3];
     private float[] magnetometerData = new float[3];
     private float[] accelerometerData = new float[3];
     private boolean magnetometerSet = false;
     private boolean accelerometerSet = false;
-    private float currentDegree = 0;
-
-    public CompassListener(ImageView arrow) {
-        this.arrow = arrow;
-    }
 
     public static void updateLocation(float distance, float angle) {
         lastKnownDistance = distance;
@@ -52,7 +46,7 @@ public class CompassListener implements SensorEventListener {
             SensorManager.getOrientation(matrixR, orientationMatrix);
             float azimuthInRadians = orientationMatrix[0];
             float azimuthInDegrees = (float) (Math.toDegrees(azimuthInRadians) + 360) % 360;
-            currentDegree = lastKnownAngle - azimuthInDegrees;
+            float currentDegree = lastKnownAngle - azimuthInDegrees;
             DirectionActivity.updateScreen(lastKnownDistance, currentDegree);
         }
     }
