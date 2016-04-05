@@ -16,4 +16,8 @@
     <string name="prompt_name">Name</string>
     <string name="action_register">Register</string>
     <string name="prompt_username">Username</string>
+    <string name="error_long_name">Use only one name or shorten your name</string>
+    <string name="title_activity_main">MainActivity</string>
+    <string name="dest_lat">Destination Latitude</string>
+    <string name="dest_long">Destination Longitude</string>
 </resources>
