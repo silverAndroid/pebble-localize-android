@@ -21,8 +21,17 @@ import android.view.View;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import com.getpebble.android.kit.PebbleKit;
+import com.getpebble.android.kit.util.PebbleDictionary;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.Locale;
+import java.util.UUID;
 
 import me.silverandroid.pebblelocalize.listeners.CompassListener;
 import me.silverandroid.pebblelocalize.listeners.GPSListener;
@@ -31,10 +40,14 @@ public class DirectionActivity extends AppCompatActivity {
 
     private static final String TAG = "DirectionActivity";
     private static final int REQUEST_LOCATION = 0;
+    private static final int USERNAME = 0;
+    private static final int DISTANCE = 1;
+    private static final int ANGLE = 2;
+    private static final int NUM_USERS = 3;
     private static SensorManager sensorService;
     private static ImageView arrow;
     private static TextView distance;
-    private static TextView bearing;
+    private static Context context;
     private LocationManager locationManager;
     private Sensor magnetometer;
     private Sensor accelerometer;
@@ -43,6 +56,7 @@ public class DirectionActivity extends AppCompatActivity {
     public static void updateScreen(float distanceF, float angle) {
         distance.setText(String.format(Locale.getDefault(), "%fm", distanceF));
         updateArrow(angle);
+        sendData("pew", distanceF, angle);
     }
 
     private static void updateArrow(float angle) {
@@ -54,6 +68,47 @@ public class DirectionActivity extends AppCompatActivity {
         arrow.setImageMatrix(matrix);
     }
 
+    private static UUID getAppUUID() {
+        UUID appUUID = null;
+        String fileData = readRawTextFile(R.raw.secret);
+        if (fileData != null) {
+            appUUID = UUID.fromString(fileData.split("\n")[0].split("=")[1]);
+        }
+        return appUUID;
+    }
+
+    public static String readRawTextFile(int resId) {
+        InputStream inputStream = context.getResources().openRawResource(resId);
+
+        InputStreamReader inputreader = new InputStreamReader(inputStream);
+        BufferedReader buffreader = new BufferedReader(inputreader);
+        String line;
+        StringBuilder text = new StringBuilder();
+
+        try {
+            while ((line = buffreader.readLine()) != null) {
+                text.append(line);
+                text.append('\n');
+            }
+        } catch (IOException e) {
+            return null;
+        }
+        return text.toString();
+    }
+
+    public static void sendData(String username, float distance, float angle) {
+        //TODO: Remember to send number of users being sent
+        PebbleDictionary dictionary = new PebbleDictionary();
+        dictionary.addString(USERNAME, username);
+        dictionary.addUint32(DISTANCE, (int) distance);
+        dictionary.addUint32(ANGLE, (int) angle);
+        UUID uuid = getAppUUID();
+        if (uuid == null)
+            PebbleKit.sendDataToPebble(context, getAppUUID(), dictionary);
+        else
+            Toast.makeText(context, "Unable to connect to Pebble", Toast.LENGTH_SHORT).show();
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -61,7 +116,7 @@ public class DirectionActivity extends AppCompatActivity {
 
         arrow = (ImageView) findViewById(R.id.direction);
         distance = (TextView) findViewById(R.id.distance);
-        bearing = (TextView) findViewById(R.id.bearing);
+        context = this;
 
         initializeSensors();
         initializeLocationAcquiring();
@@ -127,7 +182,7 @@ public class DirectionActivity extends AppCompatActivity {
         magnetometer = sensorService.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
         accelerometer = sensorService.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         if (magnetometer != null && accelerometer != null) {
-            sensorListener = new CompassListener(arrow);
+            sensorListener = new CompassListener();
             sensorService.registerListener(sensorListener, magnetometer, SensorManager.SENSOR_DELAY_NORMAL);
             sensorService.registerListener(sensorListener, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
             Log.i(TAG, "initializeSensors: Registered Magnetic Field Sensor and Accelerometer");
@@ -157,7 +212,8 @@ public class DirectionActivity extends AppCompatActivity {
     }
 
     private void requestLocationManagerUpdates() {
-        LocationListener locationListener = new GPSListener(45.43f, -75.7f);
+        LocationListener locationListener = new GPSListener(TempData.getInstance().getLatitude(), TempData
+                .getInstance().getLongitude());
         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 1, locationListener);
         locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 1000, 1, locationListener);
     }
