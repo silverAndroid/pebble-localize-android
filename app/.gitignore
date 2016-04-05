@@ -22,6 +22,7 @@ Thumbs.db
 .gradle
 build/
 *.gradle
+secret.txt
 
 #NDK
 obj/
