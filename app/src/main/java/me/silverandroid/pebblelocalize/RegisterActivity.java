@@ -3,10 +3,12 @@ package me.silverandroid.pebblelocalize;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.annotation.TargetApi;
+import android.content.Intent;
 import android.os.Build;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
@@ -15,11 +17,12 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
-
+import me.silverandroid.pebblelocalize.retrofit.LocalizeClient;
+import me.silverandroid.pebblelocalize.retrofit.ServiceGenerator;
+import me.silverandroid.pebblelocalize.retrofit.User;
 import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class RegisterActivity extends AppCompatActivity {
 
@@ -34,31 +37,37 @@ public class RegisterActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_register);
-        // Set up the login form.
-        mUsernameView = (EditText) findViewById(R.id.username);
-        mNameView = (EditText) findViewById(R.id.name);
-        mPasswordView = (EditText) findViewById(R.id.password);
-        mPasswordView.setOnEditorActionListener(new TextView.OnEditorActionListener() {
-            @Override
-            public boolean onEditorAction(TextView textView, int id, KeyEvent keyEvent) {
-                if (id == R.id.login || id == EditorInfo.IME_NULL) {
-                    attemptRegistration();
-                    return true;
+
+        TempData.newInstance(this);
+        if (TempData.getInstance().isLoggedIn()) {
+            loggedIn();
+        } else {
+            // Set up the login form.
+            mUsernameView = (EditText) findViewById(R.id.username);
+            mNameView = (EditText) findViewById(R.id.name);
+            mPasswordView = (EditText) findViewById(R.id.password);
+            mPasswordView.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+                @Override
+                public boolean onEditorAction(TextView textView, int id, KeyEvent keyEvent) {
+                    if (id == R.id.register || id == EditorInfo.IME_NULL) {
+                        attemptRegistration();
+                        return true;
+                    }
+                    return false;
                 }
-                return false;
-            }
-        });
+            });
 
-        Button mEmailSignInButton = (Button) findViewById(R.id.email_sign_in_button);
-        mEmailSignInButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                attemptRegistration();
-            }
-        });
+            Button mEmailSignInButton = (Button) findViewById(R.id.register_button);
+            mEmailSignInButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    attemptRegistration();
+                }
+            });
 
-        mRegisterFormView = findViewById(R.id.login_form);
-        mProgressView = findViewById(R.id.login_progress);
+            mRegisterFormView = findViewById(R.id.register_form);
+            mProgressView = findViewById(R.id.register_progress);
+        }
     }
 
     private void attemptRegistration() {
@@ -80,6 +89,10 @@ public class RegisterActivity extends AppCompatActivity {
             mNameView.setError(getString(R.string.error_field_required));
             focusView = mNameView;
             cancel = true;
+        } else if (!isNameValid(name)) {
+            mNameView.setError(getString(R.string.error_long_name));
+            focusView = mNameView;
+            cancel = true;
         }
 
         // Check for a valid password, if the user entered one.
@@ -94,7 +107,7 @@ public class RegisterActivity extends AppCompatActivity {
             mUsernameView.setError(getString(R.string.error_field_required));
             focusView = mUsernameView;
             cancel = true;
-        } else if (!isEmailValid(username)) {
+        } else if (!isUsernameValid(username)) {
             mUsernameView.setError(getString(R.string.error_invalid_email));
             focusView = mUsernameView;
             cancel = true;
@@ -110,27 +123,43 @@ public class RegisterActivity extends AppCompatActivity {
             showProgress(true);
             //add login request here
             LocalizeClient client = ServiceGenerator.createService(LocalizeClient.class);
+            Call<User> registerRequest = client.register(name, username, password/*Util
+            .hashPassword(password)*/);
+            registerRequest.enqueue(new Callback<User>() {
+                public static final String TAG = "RegisterRequest";
 
-            try {
-                MessageDigest digester = MessageDigest.getInstance("SHA256");
-                byte[] hashedPasswordBytes = digester.digest(password.getBytes());
+                @Override
+                public void onResponse(Call<User> call, Response<User> response) {
+                    Log.i(TAG, "onResponse: successful response");
+                    int statusCode = response.code();
+                    if (statusCode == 200) {
+                        TempData.getInstance().saveUserID(response.body().getResponse());
+                        loggedIn();
+                    } else {
+                        Toast.makeText(RegisterActivity.this, response.body().getResponse(), Toast
+                                .LENGTH_SHORT).show();
+                    }
+                }
 
-                Call<Object> loginRequest = client.register(name, username, Arrays.toString
-                        (hashedPasswordBytes));
-            } catch (NoSuchAlgorithmException e) {
-                Toast.makeText(this, "Algorithm doesn't exist...", Toast.LENGTH_SHORT).show();
-            }
+                @Override
+                public void onFailure(Call<User> call, Throwable t) {
+                    Log.e(TAG, "onFailure: failed to register", t);
+                    Toast.makeText(RegisterActivity.this, "An error occurred!", Toast.LENGTH_SHORT).show();
+                }
+            });
         }
     }
 
-    private boolean isEmailValid(String email) {
-        //TODO: Replace this with your own logic
-        return email.contains("@");
+    private boolean isUsernameValid(String username) {
+        return username.length() <= 50;
     }
 
     private boolean isPasswordValid(String password) {
-        //TODO: Replace this with your own logic
-        return password.length() > 4;
+        return password.length() <= 50;
+    }
+
+    private boolean isNameValid(String name) {
+        return name.length() <= 50;
     }
 
     /**
@@ -167,5 +196,11 @@ public class RegisterActivity extends AppCompatActivity {
             mProgressView.setVisibility(show ? View.VISIBLE : View.GONE);
             mRegisterFormView.setVisibility(show ? View.GONE : View.VISIBLE);
         }
+    }
+
+    private void loggedIn() {
+        Intent intent = new Intent(RegisterActivity.this, MainActivity.class);
+        startActivity(intent);
+        finish();
     }
 }
