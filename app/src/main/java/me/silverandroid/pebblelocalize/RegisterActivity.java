@@ -17,6 +17,8 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.net.ConnectException;
+
 import me.silverandroid.pebblelocalize.retrofit.LocalizeClient;
 import me.silverandroid.pebblelocalize.retrofit.ServiceGenerator;
 import me.silverandroid.pebblelocalize.retrofit.User;
@@ -30,6 +32,7 @@ public class RegisterActivity extends AppCompatActivity {
     private EditText mUsernameView;
     private EditText mPasswordView;
     private EditText mNameView;
+    private EditText mConfirmPasswordView;
     private View mProgressView;
     private View mRegisterFormView;
 
@@ -46,7 +49,8 @@ public class RegisterActivity extends AppCompatActivity {
             mUsernameView = (EditText) findViewById(R.id.username);
             mNameView = (EditText) findViewById(R.id.name);
             mPasswordView = (EditText) findViewById(R.id.password);
-            mPasswordView.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+            mConfirmPasswordView = (EditText) findViewById(R.id.confirm_password);
+            mConfirmPasswordView.setOnEditorActionListener(new TextView.OnEditorActionListener() {
                 @Override
                 public boolean onEditorAction(TextView textView, int id, KeyEvent keyEvent) {
                     if (id == R.id.register || id == EditorInfo.IME_NULL) {
@@ -57,8 +61,8 @@ public class RegisterActivity extends AppCompatActivity {
                 }
             });
 
-            Button mEmailSignInButton = (Button) findViewById(R.id.register_button);
-            mEmailSignInButton.setOnClickListener(new View.OnClickListener() {
+            Button mRegisterButton = (Button) findViewById(R.id.register_button);
+            mRegisterButton.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
                     attemptRegistration();
@@ -79,6 +83,7 @@ public class RegisterActivity extends AppCompatActivity {
         // Store values at the time of the login attempt.
         String username = mUsernameView.getText().toString();
         String password = mPasswordView.getText().toString();
+        String confirmPassword = mConfirmPasswordView.getText().toString();
         String name = mNameView.getText().toString();
 
         boolean cancel = false;
@@ -99,6 +104,16 @@ public class RegisterActivity extends AppCompatActivity {
         if (!TextUtils.isEmpty(password) && !isPasswordValid(password)) {
             mPasswordView.setError(getString(R.string.error_invalid_password));
             focusView = mPasswordView;
+            cancel = true;
+        }
+
+        if (TextUtils.isEmpty(confirmPassword)) {
+            mConfirmPasswordView.setError(getString(R.string.error_field_required));
+            focusView = mConfirmPasswordView;
+            cancel = true;
+        } else if (!password.equals(confirmPassword)) {
+            mConfirmPasswordView.setError(getString(R.string.error_passwords_no_match));
+            focusView = mConfirmPasswordView;
             cancel = true;
         }
 
@@ -144,7 +159,12 @@ public class RegisterActivity extends AppCompatActivity {
                 @Override
                 public void onFailure(Call<User> call, Throwable t) {
                     Log.e(TAG, "onFailure: failed to register", t);
-                    Toast.makeText(RegisterActivity.this, "An error occurred!", Toast.LENGTH_SHORT).show();
+                    if (t instanceof ConnectException) {
+                        Toast.makeText(RegisterActivity.this, "Could not connect to server!", Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(RegisterActivity.this, "An error occurred!", Toast.LENGTH_SHORT).show();
+                    }
+                    showProgress(false);
                 }
             });
         }
