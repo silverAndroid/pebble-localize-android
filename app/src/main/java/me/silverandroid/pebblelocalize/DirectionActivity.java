@@ -146,7 +146,7 @@ public class DirectionActivity extends AppCompatActivity {
         switch (requestCode) {
             case REQUEST_LOCATION:
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    requestLocationManagerUpdates();
+                    requestLocationManagerUpdates(true);
                 }
         }
     }
@@ -199,23 +199,31 @@ public class DirectionActivity extends AppCompatActivity {
         if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) || locationManager
                 .isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
             if (requestLocationUpdates()) {
-                requestLocationManagerUpdates();
+                requestLocationManagerUpdates(true);
                 Location locationGPS = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-                Location locationNet = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
                 if (locationGPS != null)
                     Log.i(TAG, "onCreate: (locationGPS) " + locationGPS.getLatitude() + ", " + locationGPS
                             .getLongitude());
-                else if (locationNet != null)
+            }
+        } else if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+            if (requestLocationUpdates()) {
+                requestLocationManagerUpdates(false);
+                Location locationNet = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+                if (locationNet != null)
                     Log.i(TAG, "onCreate: (locationNet) " + locationNet.getLatitude() + ", " + locationNet
                             .getLongitude());
             }
         }
     }
 
-    private void requestLocationManagerUpdates() {
+    private void requestLocationManagerUpdates(boolean gps) {
         LocationListener locationListener = new GPSListener(TempData.getInstance().getLatitude(), TempData
                 .getInstance().getLongitude());
-        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 1, locationListener);
-        locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 1000, 1, locationListener);
+        if (gps) {
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 1, locationListener);
+        } else {
+            locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 1000, 1,
+                    locationListener);
+        }
     }
 }
