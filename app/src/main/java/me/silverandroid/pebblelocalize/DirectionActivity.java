@@ -196,7 +196,8 @@ public class DirectionActivity extends AppCompatActivity {
 
     private void initializeLocationAcquiring() {
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+        if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) || locationManager
+                .isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
             if (requestLocationUpdates()) {
                 requestLocationManagerUpdates();
                 Location locationGPS = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);

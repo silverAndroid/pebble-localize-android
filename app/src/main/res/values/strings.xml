@@ -20,4 +20,6 @@
     <string name="title_activity_main">MainActivity</string>
     <string name="dest_lat">Destination Latitude</string>
     <string name="dest_long">Destination Longitude</string>
+    <string name="prompt_password_confirm">Confirm Password</string>
+    <string name="error_passwords_no_match">Passwords do not match</string>
 </resources>
